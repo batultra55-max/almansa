@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>المنصة TV - النسخة الاحترافية للشاشات</title>
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --bg: #050505;
+            --accent: #d4af37;
+            --glow: 0 0 20px rgba(212, 175, 55, 0.6);
+            --glass: rgba(255, 255, 255, 0.05);
+        }
+
+        body { 
+            background-color: var(--bg); 
+            color: #fff; 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden; 
+            margin: 0;
+        }
+
+        /* نظام التحديد (Focus) للريموت */
+        [tabindex]:focus {
+            outline: none;
+            border: 3px solid var(--accent) !important;
+            box-shadow: var(--glow);
+            transform: scale(1.03);
+            background: rgba(212, 175, 55, 0.1) !important;
+            transition: 0.2s;
+        }
+
+        header {
+            height: 100px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 40px;
+            background: linear-gradient(to bottom, #000, transparent);
+            z-index: 100;
+        }
+
+        .brand-name { font-size: 2.2rem; font-weight: 900; }
+        .brand-name span { color: var(--accent); }
+
+        main { height: calc(100vh - 200px); padding: 20px 40px; overflow-y: auto; }
+
+        /* تنسيق الشبكة لتناسب التلفاز */
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+        }
+
+        .card-item, .folder-item {
+            background: var(--glass);
+            padding: 25px;
+            border-radius: 15px;
+            border: 1px solid rgba(255,255,255,0.1);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            font-size: 1.2rem;
+        }
+
+        /* سهم الفأرة الافتراضي */
+        #virtual-cursor {
+            position: fixed;
+            width: 30px;
+            height: 30px;
+            background: url('https://cur.cursors-4u.net/arrows/arr-13/arr1203.png'), auto;
+            background-size: contain;
+            z-index: 999999;
+            pointer-events: none;
+            display: none;
+            filter: drop-shadow(0 0 5px gold);
+        }
+
+        footer {
+            height: 100px;
+            background: #000;
+            display: flex;
+            border-top: 2px solid var(--accent);
+        }
+
+        .nav-item {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3rem;
+            color: #888;
+        }
+
+        .nav-item.active { color: var(--accent); }
+
+        #player-view { position: fixed; inset: 0; background: #000; z-index: 50000; display: none; }
+
+        iframe { width: 100%; height: 100%; border: none; }
+        
+        .external-container { position: absolute; inset: 100px 0 100px 0; display: none; }
+    </style>
+</head>
+<body tabindex="-1">
+
+    <div id="virtual-cursor"></div>
+
+    <header>
+        <div class="brand-name">المنصة <span>TV</span></div>
+        <div style="display:flex; gap:15px;">
+            <div class="card-item" tabindex="0" onclick="location.reload()"><i class="fa-solid fa-sync"></i></div>
+            <div class="card-item" tabindex="0" onclick="toggleMenu('dev-menu')"><i class="fa-solid fa-info-circle"></i></div>
+        </div>
+    </header>
+
+    <main id="main-scroll">
+        <div id="content-view" class="grid-container">
+            </div>
+    </main>
+
+    <div id="matches-view" class="external-container">
+        <iframe id="matches-frame" src="about:blank"></iframe>
+    </div>
+    <div id="movies-view" class="external-container">
+        <iframe id="movies-frame" src="about:blank"></iframe>
+    </div>
+
+    <div id="player-view">
+        <video id="v-node" controls style="width:100%; height:100%;"></video>
+    </div>
+
+    <footer>
+        <div class="nav-item" tabindex="0" onclick="navigate('live', this)"><i class="fa-solid fa-tv"></i><span>القنوات</span></div>
+        <div class="nav-item" tabindex="0" onclick="navigate('matches', this)"><i class="fa-solid fa-soccer-ball"></i><span>المباريات</span></div>
+        <div class="nav-item" tabindex="0" onclick="navigate('movies', this)"><i class="fa-solid fa-film"></i><span>الأفلام</span></div>
+    </footer>
+
+    <script>
+        let cursorX = window.innerWidth / 2;
+        let cursorY = window.innerHeight / 2;
+        let isExternalView = false;
+
+        // نظام التحكم بالريموت (D-Pad)
+        document.addEventListener('keydown', (e) => {
+            const cursor = document.getElementById('virtual-cursor');
+            
+            if (isExternalView) {
+                cursor.style.display = 'block';
+                const speed = 25;
+                if(e.key === 'ArrowUp') cursorY -= speed;
+                if(e.key === 'ArrowDown') cursorY += speed;
+                if(e.key === 'ArrowLeft') cursorX -= speed;
+                if(e.key === 'ArrowRight') cursorX += speed;
+                
+                cursor.style.left = cursorX + 'px';
+                cursor.style.top = cursorY + 'px';
+
+                if(e.key === 'Enter' || e.key === 'OK') {
+                    const el = document.elementFromPoint(cursorX, cursorY);
+                    if(el) el.click();
+                }
+            } else {
+                cursor.style.display = 'none';
+            }
+        });
+
+        async function navigate(page, el) {
+            isExternalView = (page !== 'live');
+            document.querySelectorAll('.external-container').forEach(v => v.style.display = 'none');
+            document.getElementById('content-view').style.display = page === 'live' ? 'grid' : 'none';
+            
+            if(page === 'matches') {
+                document.getElementById('matches-view').style.display = 'block';
+                document.getElementById('matches-frame').src = "https://www.yallamix.com/";
+            } else if(page === 'movies') {
+                document.getElementById('movies-view').style.display = 'block';
+                document.getElementById('movies-frame').src = "https://moviebox.ph";
+            }
+            
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            el.classList.add('active');
+        }
+
+        // دالة جلب القنوات (نسخة مبسطة للتوضيح)
+        async function loadChannels() {
+            const container = document.getElementById('content-view');
+            // هنا تضع كود الـ fetch الخاص بك كما في الكود السابق
+            // تأكد من إضافة tabindex="0" لكل عنصر card-item ليتمكن الريموت من الوقوف عليه
+            container.innerHTML = `
+                <div class="card-item" tabindex="0" onclick="alert('مثال لقناة')">قناة تجريبية 1</div>
+                <div class="card-item" tabindex="0">قناة تجريبية 2</div>
+            `;
+        }
+
+        window.onload = loadChannels;
+    </script>
+</body>
+</html>
