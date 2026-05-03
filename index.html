@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>المنصة TV - النسخة الاحترافية</title>
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --bg: #000000;
+            --accent: #d4af37;
+            --glow: 0 0 35px rgba(212, 175, 55, 0.4);
+            --glass: rgba(255, 255, 255, 0.08);
+            --safe-top: env(safe-area-inset-top, 25px);
+            --spring-timing: cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        }
+
+        * { box-sizing: border-box !important; -webkit-tap-highlight-color: transparent !important; margin: 0; padding: 0; -webkit-font-smoothing: antialiased; }
+        html, body { 
+            background-color: #000 !important; 
+            color: #fff !important; 
+            font-family: system-ui, -apple-system, sans-serif; 
+            height: 100vh; width: 100vw; 
+            overflow: hidden;
+            cursor: none; 
+        }
+
+        .card-item:focus, .nav-item:focus, .btn-action:focus, .folder-item:focus {
+            outline: none;
+            border: 3px solid var(--accent) !important;
+            background: rgba(212, 175, 55, 0.2) !important;
+            transform: scale(1.02);
+            box-shadow: 0 0 20px var(--accent);
+        }
+
+        .overlay-menu { position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 25000; display: none; flex-direction: column; padding: 40px 20px; backdrop-filter: blur(20px); transform: translateY(100%); transition: transform 0.5s var(--spring-timing); }
+        .overlay-menu.active { display: flex; transform: translateY(0); }
+
+        header { height: 90px; display: flex; justify-content: space-between; align-items: center; padding: var(--safe-top) 20px 0; border-bottom: 1px solid var(--glass); background: rgba(0,0,0,0.9); z-index: 9000; position: relative; }
+        .brand-name { font-size: 1.4rem; font-weight: 900; text-shadow: var(--glow); flex: 1; text-align: center; }
+        .brand-name span { color: var(--accent); }
+
+        .tools-box { display: flex; gap: 8px; align-items: center; }
+        .btn-action { width: 38px; height: 38px; border-radius: 50%; background: var(--glass); border: 1px solid var(--accent); display: flex; justify-content: center; align-items: center; color: var(--accent); cursor: pointer; box-shadow: var(--glow); transition: 0.2s; }
+        .btn-action.active-green { color: #2ecc71 !important; border-color: #2ecc71 !important; box-shadow: 0 0 15px rgba(46, 204, 113, 0.4); }
+
+        #action-float-menu {
+            position: fixed; z-index: 30000; display: none; gap: 20px; background: rgba(0,0,0,0.95); padding: 15px 25px; border-radius: 30px;
+            border: 1px solid var(--accent); backdrop-filter: blur(15px); box-shadow: var(--glow); transform: translate(-50%, -50%); flex-direction: row; align-items: center;
+        }
+        .float-item { display: flex; flex-direction: column; align-items: center; gap: 5px; color: #fff; cursor: pointer; }
+        .float-item i { width: 45px; height: 45px; border-radius: 50%; display: flex; justify-content: center; align-items: center; border: 1px solid rgba(255,255,255,0.2); font-size: 1.2rem; }
+
+        .folder-item { margin: 10px 15px; height: 65px; display: flex; justify-content: space-between; align-items: center; padding: 0 20px; border-radius: 18px; cursor: pointer; transition: 0.3s; border: 2px solid transparent; }
+        #back-float-btn { position: fixed; top: 110px; right: 15px; z-index: 35000; width: 50px; height: 50px; border-radius: 50%; background: rgba(212, 175, 55, 0.2); backdrop-filter: blur(8px); border: 1.5px solid var(--accent); color: var(--accent); display: none; justify-content: center; align-items: center; font-size: 1.4rem; }
+
+        main { height: calc(100vh - 180px); width: 100%; background: #000; position: relative; overflow: hidden; }
+        #content-view, #fav-content { height: 100%; overflow-y: auto; padding-bottom: 20px; }
+        
+        #external-site-container, #matches-view { display: none; position: absolute; inset: 0; width: 100%; height: 100%; background: #000; }
+        #site-wrapper, #matches-wrapper { width: 100%; height: 100%; position: relative; }
+        iframe { width: 100%; height: 100%; border: none; background: #000; }
+
+        .card-item { background: var(--glass); margin: 10px 15px; padding: 18px; border-radius: 18px; border: 1px solid rgba(255,255,255,0.03); display: flex; justify-content: space-between; align-items: center; transition: 0.3s; cursor: pointer; }
+        
+        #player-view { position: fixed; inset: 0; background: #000; z-index: 40000; display: none; flex-direction: column; justify-content: center; }
+        .exit-btn { position: absolute; top: 40px; left: 20px; z-index: 41000; background: #ff3b30; color: #fff; padding: 12px 25px; border-radius: 15px; font-weight: bold; border: none; }
+
+        footer { height: 90px; background: rgba(0,0,0,0.95); display: flex; position: fixed; bottom: 0; width: 100%; border-top: 1px solid var(--glass); z-index: 9000; backdrop-filter: blur(10px); }
+        .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #555; font-size: 0.85rem; cursor: pointer; }
+        .nav-item.active { color: var(--accent); }
+        .nav-item i { font-size: 1.5rem; margin-bottom: 5px; }
+
+        #virtual-cursor {
+            position: fixed; z-index: 999999; color: #fff; font-size: 30px;
+            text-shadow: 0 0 10px #000; pointer-events: none; display: none;
+        }
+    </style>
+</head>
+<body tabindex="0">
+
+    <div id="virtual-cursor"><i class="fa-solid fa-arrow-pointer"></i></div>
+    <div id="back-float-btn" onclick="goBackInternal()"><i class="fa-solid fa-arrow-right"></i></div>
+
+    <header>
+        <div class="tools-box">
+            <div class="btn-action" onclick="toggleMenu('dev-menu')"><i class="fa-solid fa-bars"></i></div>
+            <div class="btn-action" onclick="toggleSearch()"><i class="fa-solid fa-search"></i></div>
+        </div>
+        <div class="brand-name">المنصة <span>TV</span></div>
+        <div class="tools-box">
+            <div class="btn-action" onclick="location.reload()"><i class="fa-solid fa-sync-alt"></i></div>
+            <div id="zoomBtn" class="btn-action" onclick="toggleFullScreen()"><i class="fa-solid fa-expand-arrows-alt"></i></div>
+        </div>
+    </header>
+
+    <div id="dev-menu" class="overlay-menu">
+        <button class="close-menu-btn" onclick="toggleMenu('dev-menu')">خروج</button>
+        <div class="menu-title">المطور: حسين علي عقيل</div>
+    </div>
+
+    <main>
+        <div id="content-view"></div>
+        <div id="external-site-container"><div id="site-wrapper"><iframe id="movie-site-loader" src="about:blank"></iframe></div></div>
+        <div id="matches-view"><div id="matches-wrapper"><iframe id="matches-frame" src="about:blank"></iframe></div></div>
+    </main>
+
+    <div id="player-view">
+        <button class="exit-btn" onclick="closePlayer()">خروج</button>
+        <video id="v-node" playsinline controls style="width:100%; height:100%;"></video>
+    </div>
+
+    <footer>
+        <div class="nav-item active" onclick="navigate('live', this)"><i class="fa-solid fa-tv"></i><span>القنوات</span></div>
+        <div class="nav-item" onclick="navigate('matches', this)"><i class="fa-solid fa-soccer-ball"></i><span>المباريات</span></div>
+        <div class="nav-item" onclick="navigate('movies', this)"><i class="fa-solid fa-film"></i><span>الأفلام</span></div>
+    </footer>
+
+    <script>
+        // روابط قنوات IPTV محدثة وتعمل بنسبة كبيرة
+        const M3U_URLS = [
+            'https://iptv-org.github.io/iptv/languages/ara.m3u',
+            'https://raw.githubusercontent.com/Free-TV/IPTV/master/playlist.m3u8'
+        ];
+
+        let hls, activePage = 'live', allData = [];
+        let vMouse = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+        const cursorEl = document.getElementById('virtual-cursor');
+
+        window.onload = () => { navigate('live', document.querySelector('.nav-item')); };
+
+        // نظام الفأرة الافتراضي للريموت
+        document.addEventListener('keydown', (e) => {
+            if (activePage === 'matches' || activePage === 'movies') {
+                cursorEl.style.display = 'block';
+                const step = 40;
+                if (e.key === 'ArrowUp') vMouse.y -= step;
+                if (e.key === 'ArrowDown') vMouse.y += step;
+                if (e.key === 'ArrowLeft') vMouse.x -= step;
+                if (e.key === 'ArrowRight') vMouse.x += step;
+                cursorEl.style.top = vMouse.y + 'px';
+                cursorEl.style.left = vMouse.x + 'px';
+                if (e.key === 'Enter') {
+                    const el = document.elementFromPoint(vMouse.x, vMouse.y);
+                    if (el) el.click();
+                }
+            }
+        });
+
+        async function fetchAll() {
+            const content = document.getElementById('content-view');
+            content.innerHTML = '<div style="text-align:center; padding-top:50px;"><i class="fa-solid fa-sync fa-spin fa-2x" style="color:var(--accent)"></i><p>جاري جلب القنوات...</p></div>';
+            
+            let temp = [];
+            for(let url of M3U_URLS){
+                try {
+                    const res = await fetch(url);
+                    const text = await res.text();
+                    const lines = text.split('\n');
+                    for (let i = 0; i < lines.length; i++) {
+                        if (lines[i].includes('#EXTINF:')) {
+                            const nameMatch = lines[i].match(/,(.*)$/);
+                            const name = nameMatch ? nameMatch[1].trim() : "قناة غير معروفة";
+                            const link = lines[i+1] ? lines[i+1].trim() : "";
+                            if (link.startsWith('http')) temp.push({ name, url: link });
+                        }
+                    }
+                } catch(e) { console.error("Error fetching:", url); }
+            }
+            allData = temp;
+            renderMain();
+        }
+
+        function renderMain() {
+            const content = document.getElementById('content-view');
+            if (allData.length === 0) {
+                content.innerHTML = '<div style="text-align:center; padding-top:50px;">فشل تحميل القنوات. تأكد من اتصال الانترنت.</div>';
+                return;
+            }
+            content.innerHTML = allData.slice(0, 500).map(c => `
+                <div class="card-item" tabindex="1" onclick="playVideo('${c.name.replace(/'/g, "\\'")}', '${c.url}')">
+                    <span><i class="fa-solid fa-play-circle" style="color:var(--accent); margin-left:10px;"></i> ${c.name}</span>
+                </div>`).join('');
+        }
+
+        async function navigate(page, el) {
+            activePage = page;
+            document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+            el.classList.add('active');
+            
+            const views = ['content-view', 'matches-view', 'external-site-container'];
+            views.forEach(v => document.getElementById(v).style.display = 'none');
+            document.getElementById('back-float-btn').style.display = 'none';
+            cursorEl.style.display = 'none';
+
+            if (page === 'live') {
+                document.getElementById('content-view').style.display = 'block';
+                if(allData.length === 0) fetchAll();
+            } else if (page === 'matches') {
+                document.getElementById('matches-view').style.display = 'block';
+                document.getElementById('back-float-btn').style.display = 'flex';
+                document.getElementById('matches-frame').src = "https://www.yallamix.com/";
+            } else if (page === 'movies') {
+                document.getElementById('external-site-container').style.display = 'block';
+                document.getElementById('back-float-btn').style.display = 'flex';
+                document.getElementById('movie-site-loader').src = "https://moviebox.ph";
+            }
+        }
+
+        function playVideo(title, url) {
+            document.getElementById('player-view').style.display = 'flex';
+            const v = document.getElementById('v-node');
+            if (Hls.isSupported()) {
+                if (hls) hls.destroy();
+                hls = new Hls();
+                hls.loadSource(url);
+                hls.attachMedia(v);
+                hls.on(Hls.Events.MANIFEST_PARSED, () => v.play());
+            } else { v.src = url; v.play(); }
+        }
+
+        function closePlayer() { 
+            const v = document.getElementById('v-node');
+            v.pause(); v.src = ""; 
+            if (hls) hls.destroy();
+            document.getElementById('player-view').style.display = 'none'; 
+        }
+
+        function goBackInternal() {
+            const frame = activePage === 'matches' ? document.getElementById('matches-frame') : document.getElementById('movie-site-loader');
+            try { frame.contentWindow.history.back(); } catch(e) { frame.src = frame.src; }
+        }
+
+        function toggleMenu(id) {
+            const m = document.getElementById(id);
+            m.style.display = m.style.display === 'flex' ? 'none' : 'flex';
+            m.classList.toggle('active');
+        }
+
+        function toggleFullScreen() {
+            if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+            else document.exitFullscreen();
+        }
+
+        function toggleSearch() {
+            const s = document.getElementById('search-box');
+            if (s) s.style.display = s.style.display === 'block' ? 'none' : 'block';
+        }
+    </script>
+</body>
+</html>
+
